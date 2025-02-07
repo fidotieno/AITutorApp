@@ -36,7 +36,7 @@ const createUser = async (Model, role, email, name, hashedPassword, res) => {
       .json({ message: "Could not create user with the given data." });
   }
 
-  return res.status(201).json({ message: "User created successfully!" });
+  return user;
 };
 
 module.exports = {

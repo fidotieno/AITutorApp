@@ -50,6 +50,8 @@ const register = async (req, res, next) => {
     );
     if (!emailSent) {
       return res.status(400).json({ message: "Invalid email" });
+    } else {
+      return res.status(201).json({message: "User Created Successfully!"});
     }
   } catch (err) {
     return res.status(500).json({ message: err });
