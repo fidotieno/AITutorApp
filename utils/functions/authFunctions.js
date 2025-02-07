@@ -11,6 +11,14 @@ const checkEmailExists = async (email) => {
   return student || teacher || admin || parent;
 };
 
+const checkIdExists = async (id) => {
+  const student = await Student.findById(id);
+  const teacher = await Teacher.findById(id);
+  const admin = await Admin.findById(id);
+  const parent = await Parent.findById(id);
+  return student || teacher || admin || parent;
+};
+
 const createUser = async (Model, role, email, name, hashedPassword, res) => {
   const userExists = await checkEmailExists(email);
   if (userExists)
@@ -34,4 +42,5 @@ const createUser = async (Model, role, email, name, hashedPassword, res) => {
 module.exports = {
   createUser,
   checkEmailExists,
-}
+  checkIdExists,
+};

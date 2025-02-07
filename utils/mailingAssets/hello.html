@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to AiTutor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f8fc;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            -webkit-text-size-adjust: none;
+            -ms-text-size-adjust: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .header img {
+            max-width: 150px;
+            height: auto;
+        }
+
+        .content {
+            text-align: center;
+        }
+
+        .content h1 {
+            font-size: 2em;
+            color: #0056b3;
+            margin: 1em 0;
+        }
+
+        .content p {
+            font-size: 1em;
+            line-height: 1.6;
+            margin: 0.5em 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 1em;
+            color: #ffffff;
+            background-color: #007bff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            padding: 1em;
+            border-top: 1px solid #ddd;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media screen and (max-width: 480px) {
+            .content h1 {
+                font-size: 1.6em;
+            }
+
+            .content p {
+                font-size: 0.95em;
+            }
+
+            .button {
+                font-size: 0.9em;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="cid:companyLogo" alt="AiTutor Logo" />
+        </div>
+        <div class="content">
+            <h1>WELCOME TO AiTutor!</h1>
+            <p>Hey ${name},</p>
+            <p>
+                We’re delighted to have you join AiTutor! Our platform empowers students and educators
+                with cutting-edge AI-driven learning tools.
+            </p>
+            <p>Log in to explore your new learning experience:</p>
+            <a href="${loginLink}" class="button">Log In to AiTutor</a>
+            <p>
+                Get ready to enhance your learning journey. Stay tuned for updates, new courses, and exciting opportunities!
+            </p>
+        </div>
+        <div class="footer">
+            <p>Need help? Contact us:</p>
+            <p>Email: <a href="mailto:aitutor@gmail.com">aitutor@gmail.com</a></p>
+            <p>Phone: <a href="tel:0101010100">0101010100</a></p>
+        </div>
+    </div>
+</body>
+
+</html>
