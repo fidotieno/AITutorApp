@@ -1,6 +1,6 @@
-const cors = require('cors');
-const dotenv = require('dotenv');
-const express = require('express');
+const cors = require("cors");
+const dotenv = require("dotenv");
+const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 4050;
 const corsOptions = {
@@ -22,3 +22,4 @@ app.listen(PORT, () => {
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/courses", require("./routes/courseRoutes"));
