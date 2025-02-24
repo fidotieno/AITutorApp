@@ -1,6 +1,7 @@
 const Student = require("../models/studentModel");
 const Teacher = require("../models/teacherModel");
 const Course = require("../models/courseModel");
+const { uploadFileToDropbox } = require("../utils/functions/dropboxUpload");
 
 const createCourse = async (req, res, next) => {
   try {
@@ -26,6 +27,21 @@ const createCourse = async (req, res, next) => {
       message: "An error occurred while creating the course.",
       error: error.message,
     });
+  }
+};
+
+const getCourse = async (req, res, next) => {
+  try {
+    const courseId = req.params.id;
+    const course = await Course.findById(courseId).populate({
+      path: "studentsEnrolled",
+      select: "name email",
+    });
+    return res
+      .status(200)
+      .json({ message: "Successfully fetched the course!", course });
+  } catch (error) {
+    return res.status(500).json({ message: "Error fetching course", error });
   }
 };
 
@@ -118,10 +134,95 @@ const getCreatedCourses = async (req, res, next) => {
     .json({ message: "Created Courses fetched successfully!", teacherCourses });
 };
 
+const editCourse = async (req, res, next) => {
+  try {
+    const teacher = req.user;
+    if (teacher.role !== "teacher")
+      return res
+        .status(404)
+        .json({ message: "You are not authorized to access this resource!" });
+    const courseId = req.params.id;
+    const { title, description } = req.body;
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found." });
+    }
+    course.title = title || course.title;
+    course.description = description || course.description;
+    await course.save();
+    return res
+      .status(200)
+      .json({ message: "Course updated successfully!", course });
+  } catch (error) {
+    return res.status(500).json({
+      message: "An error occurred while updating the course.",
+      error: error.message,
+    });
+  }
+};
+
+const uploadCourseFiles = async (req, res) => {
+  try {
+    const teacher = req.user;
+    if (teacher.role !== "teacher")
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to access this resource!" });
+    const courseId = req.params.id;
+    if (!courseId)
+      return res.status(400).json({ error: "Course ID is required" });
+
+    if (!req.files || req.files.length === 0)
+      return res.status(400).json({ error: "No files uploaded" });
+
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ error: "Course not found" });
+
+    const uploadedFiles = [];
+
+    // Upload each file to Dropbox
+    for (const file of req.files) {
+      const fileUrl = await uploadFileToDropbox(
+        baseDirectory = `CourseFiles/${course._id}`,
+        file.buffer,
+        file.originalname,
+        courseId,
+        file.mimetype
+      );
+
+      // Store file details in MongoDB
+      const fileData = {
+        url: fileUrl,
+        type: file.mimetype.startsWith("image/")
+          ? "image"
+          : file.mimetype === "application/pdf"
+          ? "pdf"
+          : "video",
+        name: file.originalname,
+      };
+
+      course.files.push(fileData);
+      uploadedFiles.push(fileData);
+    }
+    await course.save();
+
+    res.status(201).json({
+      message: "Files uploaded successfully",
+      files: uploadedFiles,
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   createCourse,
+  getCourse,
   getCourses,
   enrollCourse,
   getEnrolledCourses,
   getCreatedCourses,
+  editCourse,
+  uploadCourseFiles,
 };

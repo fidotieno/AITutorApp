@@ -1,3 +1,5 @@
+const { uploadFileToDropbox } = require("../utils/functions/dropboxUpload");
+
 const getUserProfile = (req, res, next) => {
   const user = req.user;
   const { password, ...userWithoutPassword } = user.toObject();
@@ -5,16 +7,31 @@ const getUserProfile = (req, res, next) => {
 };
 
 const editUserProfile = async (req, res, next) => {
-  const { name } = req.body;
   const user = req.user;
-  if (!name) res.status(422).json({ message: "Name not Provided!" });
+  const { name } = req.body;
+  let fileUrl = "";
+  if (req.file) {
+    fileUrl = await uploadFileToDropbox(
+      (baseDirectory = `ProfilePictures/${user._id}`),
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+  }
+  if (!name) return res.status(422).json({ message: "Name not Provided!" });
   user.name = name;
+  user.profilePhoto = fileUrl;
   try {
     const updatedUser = await user.save();
     const { password, ...userWithoutPassword } = updatedUser.toObject();
-    res.status(200).json({ message : "Username updated successfully!" });
+    res
+      .status(200)
+      .json({ message: "Username updated successfully!", userWithoutPassword });
   } catch (err) {
-    res.status(500).json({ message: "Error updating user profile", error: err });
+    console.error(err);
+    res
+      .status(500)
+      .json({ message: "Error updating user profile", error: err });
   }
 };
 

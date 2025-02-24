@@ -6,6 +6,9 @@ const {
   editUserProfile,
 } = require("../controllers/userController");
 
-router.get("/get-profile", protect, getUserProfile);
-router.post("/edit-profile", protect, editUserProfile);
-module.exports = router;
+module.exports = (upload) => {
+  router.get("/get-profile", protect, getUserProfile);
+  router.post("/edit-profile", protect, upload.single("file"), editUserProfile);
+
+  return router;
+};
