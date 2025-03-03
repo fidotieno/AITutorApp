@@ -13,7 +13,7 @@ async function sendMail(email, subject, html) {
       auth: { user: process.env.APP_USER, pass: process.env.APP_PASSWORD },
     });
     await transport.sendMail({
-      from: `AiTutor - ${process.env.APP_USER}`,
+      from: `EduTech - ${process.env.APP_USER}`,
       to: email,
       subject,
       html,

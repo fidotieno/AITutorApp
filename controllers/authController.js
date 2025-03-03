@@ -45,7 +45,7 @@ const register = async (req, res, next) => {
       .replace("${loginLink}", `${process.env.CLIENT_URL}/login`);
     const emailSent = await sendEmail(
       email,
-      "Welcome to AiTutor",
+      "Welcome to EduTech",
       emailContent
     );
     if (!emailSent) {
