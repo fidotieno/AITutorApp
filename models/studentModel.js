@@ -21,8 +21,8 @@ const StudentSchema = Mongoose.Schema(
       required: true,
     },
     profilePhoto: {
-      type: String,
-      required: false,
+      url: { type: String, required: false },
+      name: { type: String, required: false },
     },
     enrolledCourses: [{ type: Mongoose.Schema.Types.ObjectId, ref: "Course" }],
   },

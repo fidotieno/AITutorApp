@@ -9,9 +9,9 @@ const getUserProfile = (req, res, next) => {
 const editUserProfile = async (req, res, next) => {
   const user = req.user;
   const { name } = req.body;
-  let fileUrl = "";
+  let fileData = "";
   if (req.file) {
-    fileUrl = await uploadFileToDropbox(
+    fileData = await uploadFileToDropbox(
       (baseDirectory = `ProfilePictures/${user._id}`),
       req.file.buffer,
       req.file.originalname,
@@ -19,8 +19,8 @@ const editUserProfile = async (req, res, next) => {
     );
   }
   if (!name) return res.status(422).json({ message: "Name not Provided!" });
-  user.name = name;
-  user.profilePhoto = fileUrl;
+  user.name = name || user.name;
+  user.profilePhoto = fileData || user.profilePhoto;
   try {
     const updatedUser = await user.save();
     const { password, ...userWithoutPassword } = updatedUser.toObject();

@@ -8,7 +8,7 @@ const {
 
 module.exports = (upload) => {
   router.get("/get-profile", protect, getUserProfile);
-  router.post("/edit-profile", protect, upload.single("file"), editUserProfile);
+  router.put("/edit-profile", protect, upload.single("file"), editUserProfile);
 
   return router;
 };
