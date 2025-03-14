@@ -37,7 +37,7 @@ const getCourse = async (req, res) => {
     const courseId = req.params.id;
     const course = await Course.findById(courseId).populate(
       "studentsEnrolled",
-      "name email"
+      "name email profilePhoto"
     );
     return res
       .status(200)

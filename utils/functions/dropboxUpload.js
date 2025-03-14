@@ -75,7 +75,7 @@ const uploadFileToDropbox = async (
     if (existingLinks.result.links.length > 0) {
       return {
         name: fileName,
-        url: existingLinks.result.links[0].url.replace("?dl=0", "?raw=1"),
+        url: existingLinks.result.links[0].url.replace("dl=0", "raw=1"),
       };
     }
 
@@ -86,7 +86,7 @@ const uploadFileToDropbox = async (
     return {
       name: fileName,
       type: fileType.slice(0, -1),
-      url: linkResponse.result.url.replace("?dl=0", "?raw=1"),
+      url: linkResponse.result.url.replace("dl=0", "raw=1"),
     };
   } catch (error) {
     console.error("Dropbox Upload Error:", error);
