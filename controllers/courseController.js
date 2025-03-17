@@ -9,22 +9,42 @@ const {
 
 const createCourse = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const {
+      title,
+      description,
+      duration,
+      level,
+      prerequisites = [],
+      courseFormat,
+      objectives = [],
+    } = req.body;
+
     const teacher = req.user;
-    if (teacher.role !== "teacher")
+
+    if (teacher.role !== "teacher") {
       return res.status(403).json({ message: "Unauthorized access!" });
+    }
 
     const newCourse = new Course({
       title,
       description,
+      duration,
+      level,
+      prerequisites,
+      courseFormat,
+      objectives,
       teacherId: teacher._id,
+      totalStudentsEnrolled: 0, // Initialize with 0 students
     });
+
     await newCourse.save();
 
     teacher.coursesCreated.push(newCourse._id);
     await teacher.save();
 
-    return res.status(201).json({ message: "Course created successfully!" });
+    return res
+      .status(201)
+      .json({ message: "Course created successfully!", course: newCourse });
   } catch (error) {
     return res
       .status(500)
@@ -38,7 +58,7 @@ const getCourse = async (req, res) => {
     const course = await Course.findById(courseId).populate(
       "studentsEnrolled",
       "name email profilePhoto"
-    );
+    ).populate("teacherId", "name");
     return res
       .status(200)
       .json({ message: "Course fetched successfully!", course });
@@ -75,6 +95,7 @@ const enrollCourse = async (req, res) => {
 
     student.enrolledCourses.push(courseId);
     course.studentsEnrolled.push(student._id);
+    course.totalStudentsEnrolled++;
 
     await student.save();
     await course.save();
@@ -104,6 +125,7 @@ const unenrollCourse = async (req, res, next) => {
     course.studentsEnrolled = course.studentsEnrolled.filter(
       (id) => id.toString() !== student._id.toString()
     );
+    course.totalStudentsEnrolled--;
 
     await student.save();
     await course.save();
@@ -135,6 +157,7 @@ const removeStudentFromCourse = async (req, res) => {
     course.studentsEnrolled = course.studentsEnrolled.filter(
       (id) => id.toString() !== studentId
     );
+    course.totalStudentsEnrolled--;
 
     await student.save();
     await course.save();
@@ -197,16 +220,46 @@ const getCreatedCourses = async (req, res) => {
 const editCourse = async (req, res) => {
   try {
     const teacher = req.user;
-    if (teacher.role !== "teacher")
+
+    if (teacher.role !== "teacher") {
       return res.status(403).json({ message: "Unauthorized access!" });
+    }
 
     const courseId = req.params.id;
-    const { title, description } = req.body;
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ message: "Course not found!" });
+    const {
+      title,
+      description,
+      duration,
+      level,
+      prerequisites,
+      courseFormat,
+      objectives,
+    } = req.body;
 
+    const course = await Course.findById(courseId);
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found!" });
+    }
+
+    // Ensure only the teacher who created the course can edit it
+    if (course.teacherId.toString() !== teacher._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "You can only edit your own courses!" });
+    }
+
+    // Update fields only if new values are provided
     course.title = title || course.title;
     course.description = description || course.description;
+    course.duration = duration || course.duration;
+    course.level = level || course.level;
+    course.prerequisites =
+      prerequisites !== undefined ? prerequisites : course.prerequisites;
+    course.courseFormat = courseFormat || course.courseFormat;
+    course.objectives =
+      objectives !== undefined ? objectives : course.objectives;
+
     await course.save();
 
     return res
@@ -235,7 +288,7 @@ const uploadCourseFiles = async (req, res) => {
     const uploadedFiles = [];
     for (const file of req.files) {
       const fileData = await uploadFileToDropbox(
-        `CourseFiles/${course._id}`,
+        `/CourseFiles/${course._id}`,
         file.buffer,
         file.originalname,
         file.mimetype
@@ -270,9 +323,7 @@ const deleteCourseFile = async (req, res) => {
     if (fileIndex === -1)
       return res.status(404).json({ message: "File not found!" });
 
-    await deleteFileFromDropbox(
-      `/CourseFiles/${id}/${course.files[fileIndex].type}s/${fileName}`
-    );
+    await deleteFileFromDropbox(`/CourseFiles/${id}/${fileName}`);
 
     course.files.splice(fileIndex, 1);
     await course.save();
@@ -300,7 +351,7 @@ const replaceCourseFile = async (req, res) => {
     if (!course) return res.status(404).json({ message: "Course not found" });
 
     const newFile = await replaceFileInDropbox(
-      `CourseFiles/${id}`,
+      `/CourseFiles/${id}`,
       fileName,
       file.buffer,
       file.originalname,

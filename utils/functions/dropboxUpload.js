@@ -56,13 +56,10 @@ const uploadFileToDropbox = async (
   try {
     const dbx = await initializeDropbox();
     const fileType = getFileType(mimetype);
-    const dropboxPath = baseDirectory.includes("CourseFiles")
-      ? `/${baseDirectory}/${fileType}/${fileName}`
-      : `/${baseDirectory}/${fileName}`;
 
     // Upload file
     const response = await dbx.filesUpload({
-      path: dropboxPath,
+      path: `${baseDirectory}/${fileName}`,
       contents: fileBuffer,
       mode: "add",
       autorename: true,
@@ -97,6 +94,7 @@ const uploadFileToDropbox = async (
 // **2️⃣ Delete File from Dropbox**
 const deleteFileFromDropbox = async (filePath) => {
   try {
+    console.log(filePath);
     const dbx = await initializeDropbox();
     await dbx.filesDeleteV2({ path: filePath });
     return { success: true, message: "File deleted successfully" };
@@ -115,9 +113,7 @@ const replaceFileInDropbox = async (
   mimetype
 ) => {
   try {
-    const oldFilePath = `/${baseDirectory}/${getFileType(
-      mimetype
-    )}/${oldFileName}`;
+    const oldFilePath = `${baseDirectory}/${oldFileName}`;
 
     // Delete the old file
     await deleteFileFromDropbox(oldFilePath);

@@ -86,7 +86,7 @@ const submitAssignment = async (req, res) => {
       return res.status(404).json({ message: "Assignment not found" });
 
     const fileData = await uploadFileToDropbox(
-      `Assignments/${assignmentId}`,
+      `/Assignments/${assignmentId}`,
       file.buffer,
       file.originalname,
       file.mimetype
@@ -203,8 +203,8 @@ const resubmitAssignment = async (req, res) => {
 
     // Upload new file to Dropbox
     const fileData = await replaceFileInDropbox(
-      `Assignments/${assignmentId}`,
-      submission.fileUrl,
+      `/Assignments/${assignmentId}`,
+      submission.fileName,
       file.buffer,
       file.originalname,
       file.mimetype
