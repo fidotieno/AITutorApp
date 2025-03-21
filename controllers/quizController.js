@@ -37,12 +37,26 @@ const createQuiz = async (req, res) => {
 const getQuizzesByCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const quizzes = await Quiz.find({ courseId }).populate("teacherId", "name");
+    const quizzes = await Quiz.find({ courseId })
+      .populate("teacherId", "name")
+      // .populate("submissions.studentId", "name email");
     res.status(200).json({ quizzes });
   } catch (error) {
     res
       .status(500)
       .json({ message: "Error fetching quizzes", error: error.message });
+  }
+};
+
+const getSingleQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+    res.status(200).json({ quiz });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching quiz", error: error.message });
   }
 };
 
@@ -99,7 +113,7 @@ const deleteQuiz = async (req, res) => {
 const getAvailableQuizzes = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const quizzes = await Quiz.find({ courseId }).select("-submissions"); // Don't send submissions
+    const quizzes = await Quiz.find({ courseId }); // Don't send submissions
     res.status(200).json({ quizzes });
   } catch (error) {
     res
@@ -229,8 +243,33 @@ const gradeQuizSubmission = async (req, res) => {
   }
 };
 
+// ✅ Get all quiz submissions for teachers
+const getQuizSubmissions = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const teacher = req.user;
+
+    const quiz = await Quiz.findById(quizId).populate(
+      "submissions.studentId",
+      "name email"
+    );
+    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+
+    if (quiz.teacherId.toString() !== teacher._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized!" });
+    }
+
+    res.status(200).json({ submissions: quiz.submissions });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching submissions", error: error.message });
+  }
+};
+
 module.exports = {
   createQuiz,
+  getSingleQuiz,
   getQuizzesByCourse,
   editQuiz,
   deleteQuiz,
@@ -238,4 +277,5 @@ module.exports = {
   submitQuiz,
   getQuizResults,
   gradeQuizSubmission,
+  getQuizSubmissions,
 };

@@ -46,6 +46,18 @@ const getExamsByCourse = async (req, res) => {
   }
 };
 
+const getSingleExam = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const exam = await Exam.findById(examId);
+    res.status(200).json({ exam });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching examination", error: error.message });
+  }
+};
+
 // ✅ Edit an exam
 const editExam = async (req, res) => {
   try {
@@ -99,7 +111,7 @@ const deleteExam = async (req, res) => {
 const getAvailableExams = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const exams = await Exam.find({ courseId }).select("-submissions"); // Don't send submissions
+    const exams = await Exam.find({ courseId }); // Don't send submissions
     res.status(200).json({ exams });
   } catch (error) {
     res
@@ -229,8 +241,32 @@ const gradeExamSubmission = async (req, res) => {
   }
 };
 
+const getExamSubmissions = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const teacher = req.user;
+
+    const exam = await Exam.findById(examId).populate(
+      "submissions.studentId",
+      "name email"
+    );
+    if (!exam) return res.status(404).json({ message: "Exam not found" });
+
+    if (exam.teacherId.toString() !== teacher._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized!" });
+    }
+
+    res.status(200).json({ submissions: exam.submissions });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching submissions", error: error.message });
+  }
+};
+
 module.exports = {
   createExam,
+  getSingleExam,
   getExamsByCourse,
   editExam,
   deleteExam,
@@ -238,4 +274,5 @@ module.exports = {
   submitExam,
   getExamResults,
   gradeExamSubmission,
+  getExamSubmissions,
 };
