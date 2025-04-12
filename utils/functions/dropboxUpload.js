@@ -94,7 +94,6 @@ const uploadFileToDropbox = async (
 // **2️⃣ Delete File from Dropbox**
 const deleteFileFromDropbox = async (filePath) => {
   try {
-    console.log(filePath);
     const dbx = await initializeDropbox();
     await dbx.filesDeleteV2({ path: filePath });
     return { success: true, message: "File deleted successfully" };

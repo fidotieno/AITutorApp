@@ -27,7 +27,7 @@ async function sendMail(email, subject, html) {
     });
     return true;
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
 }
 

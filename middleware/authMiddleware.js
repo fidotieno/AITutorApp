@@ -35,7 +35,7 @@ const protect = asyncHandler(async (req, res, next) => {
     } else if (err.name === "JsonWebTokenError") {
       res.status(401).json({ message: "Invalid token." });
     } else {
-      console.log(err);
+      console.error(err);
       res.status(401).json({ message: "Authentication failed." });
     }
   }

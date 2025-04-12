@@ -22,7 +22,12 @@ module.exports = (upload) => {
     submitAssignment
   );
   router.put("/:assignmentId/grade/:studentId", protect, gradeAssignment);
-  router.put("/:assignmentId/resubmit", protect, upload.single("file"), resubmitAssignment);
+  router.put(
+    "/:assignmentId/resubmit",
+    protect,
+    upload.single("file"),
+    resubmitAssignment
+  );
   router.delete("/:assignmentId", protect, deleteAssignment);
 
   return router;

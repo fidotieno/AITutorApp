@@ -33,6 +33,8 @@ app.use("/api/courses", require("./routes/courseRoutes")(upload));
 app.use("/api/assignments", require("./routes/assignmentRoutes")(upload));
 app.use("/api/quizzes", require("./routes/quizRoutes"));
 app.use("/api/exams", require("./routes/examRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/messages", require("./routes/messageRoutes")(upload));
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

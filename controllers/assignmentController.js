@@ -97,7 +97,6 @@ const submitAssignment = async (req, res) => {
       fileUrl: fileData.url,
       fileName: fileData.name,
     });
-    console.log(assignment);
     await assignment.save();
 
     res.status(200).json({

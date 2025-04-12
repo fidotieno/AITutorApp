@@ -51,7 +51,7 @@ const register = async (req, res, next) => {
     if (!emailSent) {
       return res.status(400).json({ message: "Invalid email" });
     } else {
-      return res.status(201).json({message: "User Created Successfully!"});
+      return res.status(201).json({ message: "User Created Successfully!" });
     }
   } catch (err) {
     return res.status(500).json({ message: err });
@@ -79,6 +79,17 @@ const login = async (req, res, next) => {
         expiresIn: "1d",
       });
       const { password: _, ...userWithoutPassword } = user.toObject();
+      if (parent) {
+        const children = await Student.find({
+          $or: [{ parentEmail1: email }, { parentEmail2: email }],
+        }).select("-password");
+        return res.status(200).json({
+          message: "Login successful!",
+          token: token,
+          user: userWithoutPassword,
+          children,
+        });
+      }
       return res.status(200).json({
         message: "Login successful!",
         token: token,
@@ -90,7 +101,7 @@ const login = async (req, res, next) => {
       });
     }
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({ message: "Failed to login." });
   }
 };

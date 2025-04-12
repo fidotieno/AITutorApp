@@ -24,6 +24,8 @@ const StudentSchema = Mongoose.Schema(
       url: { type: String, required: false },
       name: { type: String, required: false },
     },
+    parentEmail1: { type: String, required: false },
+    parentEmail2: { type: String, required: false },
     enrolledCourses: [{ type: Mongoose.Schema.Types.ObjectId, ref: "Course" }],
   },
   { timestamps: true }
