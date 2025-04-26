@@ -1,6 +1,5 @@
 const Dropbox = require("dropbox").Dropbox;
 require("dotenv").config();
-const fetch = require("node-fetch");
 
 const REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN;
 const CLIENT_ID = process.env.DROPBOX_CLIENT_KEY;
