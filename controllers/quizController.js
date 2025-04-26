@@ -1,5 +1,6 @@
 const Quiz = require("../models/quizModel");
 const Course = require("../models/courseModel");
+const generateFeedback = require("../utils/functions/aiFeedbackFunctions");
 
 // ✅ Create a new quiz
 const createQuiz = async (req, res) => {
@@ -37,9 +38,8 @@ const createQuiz = async (req, res) => {
 const getQuizzesByCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const quizzes = await Quiz.find({ courseId })
-      .populate("teacherId", "name")
-      // .populate("submissions.studentId", "name email");
+    const quizzes = await Quiz.find({ courseId }).populate("teacherId", "name");
+    // .populate("submissions.studentId", "name email");
     res.status(200).json({ quizzes });
   } catch (error) {
     res
@@ -122,7 +122,6 @@ const getAvailableQuizzes = async (req, res) => {
   }
 };
 
-// ✅ Submit quiz answers
 const submitQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
@@ -143,33 +142,56 @@ const submitQuiz = async (req, res) => {
         .json({ message: "You have already submitted this quiz" });
     }
 
-    let score = 0;
-    const gradedAnswers = answers.map((answer) => {
+    let totalScore = 0;
+    let totalPossibleScore = 0;
+    const gradedAnswers = [];
+
+    for (let answer of answers) {
       const question = quiz.questions.find(
         (q) => q._id.toString() === answer.questionId
       );
-      if (!question) return null;
+      if (!question) continue;
 
-      if (
-        question.type === "multiple-choice" &&
-        question.correctAnswer === answer.response
-      ) {
-        score += 1; // Correct answer
+      const points = question.points || 1; // Default 1 if points not set
+      totalPossibleScore += points; // Add points to total possible score
+
+      if (question.type === "multiple-choice") {
+        if (question.correctAnswer === answer.response) {
+          totalScore += points; // Award full points if correct
+        }
+        gradedAnswers.push({
+          questionId: question._id,
+          response: answer.response,
+        });
+      } else if (question.type === "open-ended") {
+        const feedback = await generateFeedback(
+          `Question: ${question.questionText} Answer: ${answer.response}`
+        );
+        gradedAnswers.push({
+          questionId: question._id,
+          response: answer.response,
+          feedback,
+        });
       }
-
-      return { questionId: question._id, response: answer.response };
-    });
+    }
 
     quiz.submissions.push({
       studentId: student._id,
       answers: gradedAnswers,
-      score, // Auto-graded score
-      graded: false, // Open-ended questions need manual grading
+      score: totalScore,
+      totalPossibleScore, // ⭐️ Save possible score too (optional)
+      graded: false,
     });
 
     await quiz.save();
-    res.status(201).json({ message: "Quiz submitted successfully!", score });
+    res.status(201).json({
+      message: "Quiz submitted successfully!",
+      score: totalScore,
+      totalPossibleScore,
+      percentage: ((totalScore / totalPossibleScore) * 100).toFixed(2) + "%",
+    });
   } catch (error) {
+    console.error(error);
     res
       .status(500)
       .json({ message: "Error submitting quiz", error: error.message });
@@ -223,10 +245,23 @@ const gradeQuizSubmission = async (req, res) => {
       return res.status(400).json({ message: "Submission already graded" });
     }
 
-    let totalScore = submission.score; // Start with auto-graded score
+    let totalScore = submission.score || 0; // Start with auto-graded multiple-choice score
+
     submission.answers.forEach((answer) => {
       if (grades[answer.questionId]) {
-        totalScore += grades[answer.questionId]; // Add teacher-provided scores
+        const question = quiz.questions.find(
+          (q) => q._id.toString() === answer.questionId.toString()
+        );
+
+        if (question) {
+          const points = question.points || 1; // Default to 1 if undefined
+          let givenScore = grades[answer.questionId];
+
+          if (givenScore > points) givenScore = points; // Prevent overscoring
+          if (givenScore < 0) givenScore = 0; // Prevent negative scores
+
+          totalScore += givenScore;
+        }
       }
     });
 
@@ -235,8 +270,10 @@ const gradeQuizSubmission = async (req, res) => {
     submission.feedback = feedback || "";
 
     await quiz.save();
+
     res.status(200).json({ message: "Quiz graded successfully!", submission });
   } catch (error) {
+    console.error(error);
     res
       .status(500)
       .json({ message: "Error grading quiz", error: error.message });

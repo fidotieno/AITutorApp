@@ -7,8 +7,9 @@ const QuestionSchema = new Mongoose.Schema({
     enum: ["multiple-choice", "open-ended"],
     required: true,
   },
-  options: [{ type: String }], // Only used for multiple-choice
-  correctAnswer: { type: String }, // Only used for multiple-choice
+  options: [{ type: String }],
+  correctAnswer: { type: String },
+  points: { type: Number, default: 1 },
 });
 
 const QuizSchema = new Mongoose.Schema(
@@ -30,7 +31,11 @@ const QuizSchema = new Mongoose.Schema(
       {
         studentId: { type: Mongoose.Schema.Types.ObjectId, ref: "Student" },
         answers: [
-          { questionId: Mongoose.Schema.Types.ObjectId, response: String },
+          {
+            questionId: Mongoose.Schema.Types.ObjectId,
+            response: String,
+            feedback: String,
+          },
         ],
         score: { type: Number, default: null },
         graded: { type: Boolean, default: false },
