@@ -6,4 +6,5 @@ const router = express.Router();
 
 router.post("/study-assistant", protect, studyAssistant);
 
+
 module.exports = router;

@@ -304,6 +304,82 @@ const getQuizSubmissions = async (req, res) => {
   }
 };
 
+const generateQuizQuestions = async (req, res) => {
+  try {
+    const { topic, numberOfQuestions, difficulty } = req.body;
+
+    if (!topic || !numberOfQuestions) {
+      return res
+        .status(400)
+        .json({ message: "Topic and number of questions are required" });
+    }
+
+    // 🧠 Example: Using your HuggingFace model
+    const { OpenAI } = require("openai");
+    const client = new OpenAI({
+      baseURL: "https://router.huggingface.co/novita/v3/openai",
+      apiKey: process.env.HUGGINGFACE_API_KEY,
+    });
+
+    const prompt = `
+You are an intelligent and helpful assistant. 
+Generate ${numberOfQuestions} quiz questions about the topic "${topic}" at a "${difficulty}" level. 
+Each question should have:
+- questionText
+- 4 multiple choice options (A, B, C, D)
+- correctAnswer (the correct option text, not just the letter)
+
+Format the output as a clean JSON array.
+
+Example format:
+[
+  {
+    "questionText": "What is ...?",
+    "type": "multiple-choice"
+    "options": ["...", "...", "...", "..."],
+    "correctAnswer": "B..."
+  },
+  ...
+]
+`;
+
+    const aiResponse = await client.chat.completions.create({
+      model: "thudm/glm-4-32b-0414",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+    });
+
+    let questionsText = aiResponse.choices[0].message.content;
+
+    // Sanitize and safely parse
+    let questions;
+    try {
+      // 1. Fix smart quotes
+      questionsText = questionsText.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+      // 2. Extract JSON array using regex
+      const jsonMatch = questionsText.match(/\[\s*{[\s\S]*?}\s*\]/);
+
+      if (!jsonMatch) {
+        throw new Error("No valid JSON array found in AI response.");
+      }
+
+      const jsonString = jsonMatch[0]; // The matched JSON array string
+
+      // 3. Parse
+      questions = JSON.parse(jsonString);
+    } catch (error) {
+      console.error("Failed to parse AI response:", error);
+      return res.status(500).json({ message: "AI returned invalid format." });
+    }
+
+    res.status(200).json(questions);
+  } catch (error) {
+    console.error("Error generating quiz questions:", error);
+    res.status(500).json({ message: "Failed to generate questions." });
+  }
+};
+
 module.exports = {
   createQuiz,
   getSingleQuiz,
@@ -315,4 +391,5 @@ module.exports = {
   getQuizResults,
   gradeQuizSubmission,
   getQuizSubmissions,
+  generateQuizQuestions,
 };

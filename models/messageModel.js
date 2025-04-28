@@ -11,7 +11,7 @@ const MessageSchema = new mongoose.Schema(
       userId: { type: mongoose.Schema.Types.ObjectId, required: true },
       userType: {
         type: String,
-        enum: ["teacher", "parent", "admin"],
+        enum: ["Teacher", "Parent", "Admin"],
         required: true,
       },
     },
