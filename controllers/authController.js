@@ -118,7 +118,11 @@ const forgotPassword = async (req, res, next) => {
   const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "10m",
   });
-  const resetURL = `${process.env.CLIENT_URL}/auth/reset-password/${resetToken}`;
+  const resetURL = `${
+    process.env.ENVIRONMENT === "development"
+      ? process.env.LOCAL_CLIENT_URL
+      : process.env.CLIENT_URL
+  }/reset-password/${resetToken}`;
   const filePath = path.join(
     __dirname,
     "../utils/mailingAssets/resetPassword.html"

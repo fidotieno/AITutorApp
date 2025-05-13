@@ -5,7 +5,8 @@ const generateFeedback = require("../utils/functions/aiFeedbackFunctions");
 // ✅ Create a new quiz
 const createQuiz = async (req, res) => {
   try {
-    const { courseId, title, description, questions } = req.body;
+    const { courseId, title, description, questions, deadline, timeLimit } =
+      req.body;
     const teacher = req.user;
 
     if (teacher.role !== "teacher") {
@@ -20,6 +21,8 @@ const createQuiz = async (req, res) => {
       teacherId: teacher._id,
       title,
       description,
+      deadline,
+      timeLimit,
       questions,
     });
 
@@ -65,7 +68,7 @@ const editQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
     const teacher = req.user;
-    const { title, description, questions } = req.body;
+    const { title, description, questions, deadline, timeLimit } = req.body;
 
     const quiz = await Quiz.findById(quizId);
     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
@@ -77,6 +80,8 @@ const editQuiz = async (req, res) => {
     quiz.title = title || quiz.title;
     quiz.description = description || quiz.description;
     quiz.questions = questions || quiz.questions;
+    quiz.deadline = deadline || quiz.deadline;
+    quiz.timeLimit = timeLimit || quiz.timeLimit;
 
     await quiz.save();
     res.status(200).json({ message: "Quiz updated successfully!", quiz });
@@ -131,7 +136,17 @@ const submitQuiz = async (req, res) => {
     const quiz = await Quiz.findById(quizId);
     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
 
-    // Prevent duplicate submissions
+    // 🔒 Prevent submission after deadline
+    const now = new Date();
+    if (quiz.deadline && now > new Date(quiz.deadline)) {
+      return res
+        .status(400)
+        .json({
+          message: "The deadline has passed. You cannot submit this quiz.",
+        });
+    }
+
+    // 🛑 Prevent duplicate submissions
     if (
       quiz.submissions.some(
         (sub) => sub.studentId.toString() === student._id.toString()
@@ -153,11 +168,11 @@ const submitQuiz = async (req, res) => {
       if (!question) continue;
 
       const points = question.points || 1; // Default 1 if points not set
-      totalPossibleScore += points; // Add points to total possible score
+      totalPossibleScore += points;
 
       if (question.type === "multiple-choice") {
         if (question.correctAnswer === answer.response) {
-          totalScore += points; // Award full points if correct
+          totalScore += points;
         }
         gradedAnswers.push({
           questionId: question._id,
@@ -179,7 +194,7 @@ const submitQuiz = async (req, res) => {
       studentId: student._id,
       answers: gradedAnswers,
       score: totalScore,
-      totalPossibleScore, // ⭐️ Save possible score too (optional)
+      totalPossibleScore,
       graded: false,
     });
 

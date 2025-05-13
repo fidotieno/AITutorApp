@@ -1,6 +1,5 @@
 const Student = require("../models/studentModel");
 const Quiz = require("../models/quizModel");
-const Exam = require("../models/examModel");
 const Assignment = require("../models/assignmentModel");
 
 const getStudentAnalytics = async (req, res) => {
@@ -16,9 +15,6 @@ const getStudentAnalytics = async (req, res) => {
     let quizzes = await Quiz.find({
       "submissions.studentId": studentId,
     }).populate("courseId", "title");
-    let exams = await Exam.find({
-      "submissions.studentId": studentId,
-    }).populate("courseId", "title");
     let assignments = await Assignment.find({
       "submissions.studentId": studentId,
     }).populate("courseId", "title");
@@ -26,7 +22,6 @@ const getStudentAnalytics = async (req, res) => {
     // Filter by course if needed
     if (courseId) {
       quizzes = quizzes.filter((q) => q.courseId.toString() === courseId);
-      exams = exams.filter((e) => e.courseId.toString() === courseId);
       assignments = assignments.filter(
         (a) => a.courseId.toString() === courseId
       );
@@ -38,13 +33,9 @@ const getStudentAnalytics = async (req, res) => {
 
     const overallPerformance = {
       totalQuizzes: quizzes.length,
-      totalExams: exams.length,
       totalAssignments: assignments.length,
       quizAverage: getAverage(
         quizzes.flatMap((q) => q.submissions.map((s) => s.score))
-      ),
-      examAverage: getAverage(
-        exams.flatMap((e) => e.submissions.map((s) => s.score))
       ),
       assignmentAverage: getAverage(
         assignments.flatMap((a) => a.submissions.map((s) => s.score))
@@ -52,29 +43,23 @@ const getStudentAnalytics = async (req, res) => {
     };
     overallPerformance.averageScore =
       (overallPerformance.quizAverage +
-        overallPerformance.examAverage +
         overallPerformance.assignmentAverage) /
       3;
 
     // Group by course
     const coursePerformance = {};
-    [...quizzes, ...exams, ...assignments].forEach((item) => {
+    [...quizzes, ...assignments].forEach((item) => {
       const cid = item.courseId._id.toString();
       if (!coursePerformance[cid]) {
         coursePerformance[cid] = {
           courseId: cid,
           courseName: item.courseId.title || "Unknown Course",
           quizScores: [],
-          examScores: [],
           assignmentScores: [],
         };
       }
       if (item.type === "quiz")
         coursePerformance[cid].quizScores.push(
-          ...item.submissions.map((s) => s.score)
-        );
-      if (item.type === "exam")
-        coursePerformance[cid].examScores.push(
           ...item.submissions.map((s) => s.score)
         );
       if (item.type === "assignment")
@@ -88,7 +73,6 @@ const getStudentAnalytics = async (req, res) => {
     coursePerformanceArray.forEach((course) => {
       course.averageScore = getAverage([
         ...course.quizScores,
-        ...course.examScores,
         ...course.assignmentScores,
       ]);
     });

@@ -27,6 +27,8 @@ const QuizSchema = new Mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String },
     questions: [QuestionSchema],
+    deadline: { type: Date, required: true },
+    timeLimit: { type: Number },
     submissions: [
       {
         studentId: { type: Mongoose.Schema.Types.ObjectId, ref: "Student" },

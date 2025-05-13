@@ -32,7 +32,6 @@ app.use("/api/users", require("./routes/userRoutes")(upload));
 app.use("/api/courses", require("./routes/courseRoutes")(upload));
 app.use("/api/assignments", require("./routes/assignmentRoutes")(upload));
 app.use("/api/quizzes", require("./routes/quizRoutes"));
-app.use("/api/exams", require("./routes/examRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/messages", require("./routes/messageRoutes")(upload));
 app.use("/api/ai", require("./routes/aiRoutes"));

@@ -17,7 +17,6 @@ const CourseSchema = new mongoose.Schema(
       required: true,
     },
     objectives: [{ type: String }], // What students will learn
-    totalStudentsEnrolled: { type: Number, default: 0 }, // Cached count for optimization
     teacherId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",

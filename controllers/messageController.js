@@ -93,7 +93,7 @@ const fetchConversations = async (req, res) => {
       .populate("lastMessage")
       .populate({
         path: "participants.userId",
-        select: "name",
+        select: "name email",
       });
 
     res.status(200).json(conversations);

@@ -34,7 +34,6 @@ const createCourse = async (req, res) => {
       courseFormat,
       objectives,
       teacherId: teacher._id,
-      totalStudentsEnrolled: 0, // Initialize with 0 students
     });
 
     await newCourse.save();
@@ -95,7 +94,6 @@ const enrollCourse = async (req, res) => {
 
     student.enrolledCourses.push(courseId);
     course.studentsEnrolled.push(student._id);
-    course.totalStudentsEnrolled++;
 
     await student.save();
     await course.save();
@@ -125,7 +123,6 @@ const unenrollCourse = async (req, res, next) => {
     course.studentsEnrolled = course.studentsEnrolled.filter(
       (id) => id.toString() !== student._id.toString()
     );
-    course.totalStudentsEnrolled--;
 
     await student.save();
     await course.save();
@@ -157,7 +154,6 @@ const removeStudentFromCourse = async (req, res) => {
     course.studentsEnrolled = course.studentsEnrolled.filter(
       (id) => id.toString() !== studentId
     );
-    course.totalStudentsEnrolled--;
 
     await student.save();
     await course.save();
