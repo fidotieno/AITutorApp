@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const CourseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
+    courseCode: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     description: { type: String, required: true },
     duration: { type: String, required: true }, // e.g., "5 weeks", "10 hours"
     level: {
@@ -13,7 +18,6 @@ const CourseSchema = new mongoose.Schema(
     prerequisites: [{ type: String }], // e.g., ["Basic HTML", "JavaScript"]
     courseFormat: {
       type: String,
-      enum: ["Videos & PDFs", "Live Sessions", "Hybrid"],
       required: true,
     },
     objectives: [{ type: String }], // What students will learn

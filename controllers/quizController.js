@@ -1,5 +1,6 @@
 const Quiz = require("../models/quizModel");
 const Course = require("../models/courseModel");
+const Notification = require("../models/notificationModel");
 const generateFeedback = require("../utils/functions/aiFeedbackFunctions");
 
 // ✅ Create a new quiz
@@ -16,6 +17,7 @@ const createQuiz = async (req, res) => {
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
+    
     const newQuiz = new Quiz({
       courseId,
       teacherId: teacher._id,
@@ -25,8 +27,17 @@ const createQuiz = async (req, res) => {
       timeLimit,
       questions,
     });
-
+    
     await newQuiz.save();
+    
+    const notifications = course.studentsEnrolled.map((student) => ({
+      recipient: student._id,
+      type: "quiz",
+      content: `A new quiz "${title}" has been posted.`,
+      courseId,
+    }));
+
+    await Notification.insertMany(notifications);
     res
       .status(201)
       .json({ message: "Quiz created successfully!", quiz: newQuiz });

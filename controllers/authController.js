@@ -33,8 +33,6 @@ const register = async (req, res, next) => {
       await createUser(Teacher, role, email, name, hashedPassword, res);
     } else if (role == "parent") {
       await createUser(Parent, role, email, name, hashedPassword, res);
-    } else if (role == "admin") {
-      await createUser(Admin, role, email, name, hashedPassword, res);
     } else {
       return res.status(400).json({ message: "Invalid role specified." });
     }

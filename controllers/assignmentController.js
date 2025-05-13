@@ -1,4 +1,6 @@
 const Assignment = require("../models/assignmentModel");
+const Notification = require("../models/notificationModel");
+const Course = require("../models/courseModel");
 const {
   uploadFileToDropbox,
   replaceFileInDropbox,
@@ -9,10 +11,12 @@ const createAssignment = async (req, res) => {
     const { courseId } = req.params;
     const { title, description, dueDate } = req.body;
     const teacher = req.user;
-
+    
     if (teacher.role !== "teacher")
       return res.status(403).json({ message: "Unauthorized!" });
-
+    
+    const course = await Course.findById(courseId);
+    
     const newAssignment = new Assignment({
       courseId,
       teacherId: teacher._id,
@@ -20,13 +24,24 @@ const createAssignment = async (req, res) => {
       description,
       dueDate,
     });
+
     await newAssignment.save();
+
+    const notifications = course.studentsEnrolled.map((student) => ({
+      recipient: student._id,
+      type: "assignment",
+      content: `A new assignment "${title}" has been posted.`,
+      courseId,
+    }));
+
+    await Notification.insertMany(notifications);
 
     res.status(201).json({
       message: "Assignment created successfully!",
       assignment: newAssignment,
     });
   } catch (error) {
+    console.log(error);
     res
       .status(500)
       .json({ message: "Error creating assignment", error: error.message });

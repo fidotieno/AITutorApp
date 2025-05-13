@@ -17,6 +17,7 @@ const createCourse = async (req, res) => {
       prerequisites = [],
       courseFormat,
       objectives = [],
+      courseCode, // optional
     } = req.body;
 
     const teacher = req.user;
@@ -25,8 +26,21 @@ const createCourse = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized access!" });
     }
 
+    let finalCourseCode = courseCode?.trim().toUpperCase();
+
+    if (finalCourseCode) {
+      // Check if provided courseCode already exists
+      const existing = await Course.findOne({ courseCode: finalCourseCode });
+      if (existing) {
+        return res.status(400).json({ message: "Course code already in use!" });
+      }
+    } else {
+      finalCourseCode = await generateUniqueCourseCode();
+    }
+
     const newCourse = new Course({
       title,
+      courseCode: finalCourseCode,
       description,
       duration,
       level,
@@ -41,23 +55,24 @@ const createCourse = async (req, res) => {
     teacher.coursesCreated.push(newCourse._id);
     await teacher.save();
 
-    return res
-      .status(201)
-      .json({ message: "Course created successfully!", course: newCourse });
+    return res.status(201).json({
+      message: "Course created successfully!",
+      course: newCourse,
+    });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Error creating course", error: error.message });
+    return res.status(500).json({
+      message: "Error creating course",
+      error: error.message,
+    });
   }
 };
 
 const getCourse = async (req, res) => {
   try {
     const courseId = req.params.id;
-    const course = await Course.findById(courseId).populate(
-      "studentsEnrolled",
-      "name email profilePhoto"
-    ).populate("teacherId", "name");
+    const course = await Course.findById(courseId)
+      .populate("studentsEnrolled", "name email profilePhoto")
+      .populate("teacherId", "name");
     return res
       .status(200)
       .json({ message: "Course fetched successfully!", course });
@@ -366,6 +381,19 @@ const replaceCourseFile = async (req, res) => {
       .status(500)
       .json({ message: "Error replacing file", error: error.message });
   }
+};
+
+const generateUniqueCourseCode = async () => {
+  const generate = () => `CRS-${Math.floor(1000 + Math.random() * 9000)}`;
+  let code = generate();
+  let exists = await Course.findOne({ courseCode: code });
+
+  while (exists) {
+    code = generate();
+    exists = await Course.findOne({ courseCode: code });
+  }
+
+  return code;
 };
 
 module.exports = {
