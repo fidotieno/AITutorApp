@@ -40,6 +40,7 @@ app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/messages", require("./routes/messageRoutes")(upload));
 app.use("/api/ai", require("./routes/aiRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
