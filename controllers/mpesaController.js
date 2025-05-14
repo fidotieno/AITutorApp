@@ -115,7 +115,7 @@ exports.mpesaCallback = async (req, res) => {
       .json({ message: "STK Push failed", status: ResultDesc });
   }
 
-  console.log(CallbackMetadata);
+  console.log(callback);
 
   try {
     const amount = CallbackMetadata.Item.find(
