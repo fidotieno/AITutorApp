@@ -7,6 +7,7 @@ const passkey = process.env.MPESA_PASSKEY;
 const callbackURL = process.env.MPESA_CALLBACK_URL;
 const Student = require("../models/studentModel");
 const FeePayment = require("../models/feePaymentModel");
+const PendingPayment = require("../models/pendingPayment");
 
 const getAccessToken = async () => {
   const credentials = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
@@ -56,7 +57,7 @@ exports.initiateStkPush = async (req, res) => {
       PartyB: shortcode,
       PhoneNumber: phone,
       CallBackURL: callbackURL,
-      AccountReference: studentId,
+      AccountReference: "SchoolFees", // Student ID is no longer reliable here
       TransactionDesc: "School Fees Payment",
     };
 
@@ -74,12 +75,22 @@ exports.initiateStkPush = async (req, res) => {
 
     const data = await response.json();
 
-    if (!response.ok) {
+    if (!response.ok || !data.CheckoutRequestID) {
       console.error("STK Push Error:", data);
-      return res
-        .status(500)
-        .json({ success: false, message: "STK Push failed", error: data });
+      return res.status(500).json({
+        success: false,
+        message: "STK Push failed",
+        error: data,
+      });
     }
+
+    // Save the pending payment
+    await PendingPayment.create({
+      studentId,
+      phone,
+      amount,
+      checkoutRequestId: data.CheckoutRequestID,
+    });
 
     res.status(200).json({ success: true, data });
   } catch (error) {
@@ -100,13 +111,8 @@ exports.mpesaCallback = async (req, res) => {
     return res.status(400).json({ message: "Invalid callback" });
   }
 
-  const {
-    MerchantRequestID,
-    CheckoutRequestID,
-    ResultCode,
-    ResultDesc,
-    CallbackMetadata,
-  } = callback;
+  const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } =
+    callback;
 
   if (ResultCode !== 0) {
     console.warn("M-Pesa transaction failed:", ResultDesc);
@@ -114,8 +120,6 @@ exports.mpesaCallback = async (req, res) => {
       .status(200)
       .json({ message: "STK Push failed", status: ResultDesc });
   }
-
-  console.log(callback);
 
   try {
     const amount = CallbackMetadata.Item.find(
@@ -128,13 +132,25 @@ exports.mpesaCallback = async (req, res) => {
       (item) => item.Name === "PhoneNumber"
     )?.Value;
 
-    const accountRef = req.body.Body.stkCallback.CallbackMetadata.Item.find(
-      (item) => item.Name === "AccountReference"
-    )?.Value;
+    // Find matching pending payment by CheckoutRequestID
+    const pending = await PendingPayment.findOne({
+      checkoutRequestId: CheckoutRequestID,
+    });
 
-    const student = await Student.findById(accountRef);
+    if (!pending) {
+      console.warn(
+        "❗ Unmatched callback: No pending payment found for CheckoutRequestID",
+        CheckoutRequestID
+      );
+      return res.status(404).json({ message: "Pending payment not found" });
+    }
+
+    const student = await Student.findById(pending.studentId);
     if (!student) {
-      console.error("Student not found for account reference:", accountRef);
+      console.error(
+        "Student not found for pending payment:",
+        pending.studentId
+      );
       return res.status(404).json({ message: "Student not found" });
     }
 
@@ -146,7 +162,13 @@ exports.mpesaCallback = async (req, res) => {
       method: "mpesa",
     });
 
-    console.log("✅ M-Pesa payment recorded successfully");
+    // Clean up
+    await PendingPayment.deleteOne({ _id: pending._id });
+
+    console.log(
+      "✅ M-Pesa payment recorded successfully for student:",
+      student._id
+    );
     res.status(200).json({ message: "Payment recorded successfully" });
   } catch (err) {
     console.error("Failed to process callback:", err);
