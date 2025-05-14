@@ -1,7 +1,10 @@
 const Parent = require("../models/parentModel");
 const Student = require("../models/studentModel");
 const Teacher = require("../models/teacherModel");
-const { uploadFileToDropbox } = require("../utils/functions/dropboxUpload");
+const {
+  uploadFileToDropbox,
+  replaceFileInDropbox,
+} = require("../utils/functions/dropboxUpload");
 
 const getUsersByRole = async (req, res) => {
   const { role } = req.query;
@@ -17,7 +20,10 @@ const getUsersByRole = async (req, res) => {
         users = await Teacher.find({}, "_id name email role");
         break;
       case "admin":
-        users = await Admin.find({}, "_id name email role");
+        // For admin, fetch both teachers and parents
+        const teachers = await Teacher.find({}, "_id name email role");
+        const parents = await Parent.find({}, "_id name email role");
+        users = [...teachers, ...parents];
         break;
       case "student":
         users = await Student.find({}, "_id name email role");
@@ -25,6 +31,7 @@ const getUsersByRole = async (req, res) => {
       default:
         return res.status(400).json({ message: "Invalid role" });
     }
+    console.log(users);
 
     res.status(200).json(users);
   } catch (error) {
@@ -41,12 +48,20 @@ const getUserProfile = (req, res, next) => {
 
 const editUserProfile = async (req, res, next) => {
   const user = req.user;
-  const { name, parentEmail1, parentEmail2 } = req.body;
+  const { name } = req.body;
   let fileData = "";
 
-  if (req.file) {
+  if (req.file && !user.profilePhoto) {
     fileData = await uploadFileToDropbox(
-      `ProfilePictures/${user._id}`,
+      `/ProfilePictures/${user._id}`,
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+  } else if (user.profilePhoto && req.file) {
+    fileData = await replaceFileInDropbox(
+      `/ProfilePictures/${user._id}`,
+      user.profilePhoto.name,
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype
@@ -58,21 +73,13 @@ const editUserProfile = async (req, res, next) => {
   user.name = name || user.name;
   user.profilePhoto = fileData || user.profilePhoto;
 
-  // Update parent emails only if the user is a student
-  if (user.role === "student") {
-    user.parentEmail1 = parentEmail1 || user.parentEmail1;
-    user.parentEmail2 = parentEmail2 || user.parentEmail2;
-  }
-
   try {
     const updatedUser = await user.save();
     const { password, ...userWithoutPassword } = updatedUser.toObject();
-    res
-      .status(200)
-      .json({
-        message: "Profile updated successfully!",
-        user: userWithoutPassword,
-      });
+    res.status(200).json({
+      message: "Profile updated successfully!",
+      user: userWithoutPassword,
+    });
   } catch (err) {
     console.error(err);
     res
