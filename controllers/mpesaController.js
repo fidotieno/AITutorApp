@@ -156,7 +156,7 @@ exports.mpesaCallback = async (req, res) => {
 
     await FeePayment.create({
       studentId: student._id,
-      amount,
+      amountPaid: amount,
       date: new Date(),
       transactionCode: mpesaReceipt,
       method: "mpesa",
