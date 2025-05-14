@@ -13,11 +13,11 @@ const FeePaymentSchema = mongoose.Schema(
     },
     term: {
       type: String,
-      required: true, // e.g. "Term 1 - 2025"
+      default: "School Fee Payment",
     },
     isPaidInFull: {
       type: Boolean,
-      required: true,
+      default: true,
     },
     datePaid: {
       type: Date,
