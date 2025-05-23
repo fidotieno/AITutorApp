@@ -27,6 +27,9 @@ const StudentSchema = Mongoose.Schema(
     parentEmail1: { type: String, required: false },
     parentEmail2: { type: String, required: false },
     enrolledCourses: [{ type: Mongoose.Schema.Types.ObjectId, ref: "Course" }],
+    pendingEnrollments: [
+      { type: Mongoose.Schema.Types.ObjectId, ref: "Course" },
+    ],
   },
   { timestamps: true }
 );

@@ -29,6 +29,9 @@ const CourseSchema = new mongoose.Schema(
     studentsEnrolled: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
     ],
+    pendingEnrollments: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
+    ],
     files: [
       {
         url: { type: String, required: true },

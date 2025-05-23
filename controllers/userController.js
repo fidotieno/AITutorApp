@@ -31,7 +31,6 @@ const getUsersByRole = async (req, res) => {
       default:
         return res.status(400).json({ message: "Invalid role" });
     }
-    console.log(users);
 
     res.status(200).json(users);
   } catch (error) {

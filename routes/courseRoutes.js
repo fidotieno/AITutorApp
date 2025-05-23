@@ -5,6 +5,7 @@ const {
   getCourses,
   enrollCourse,
   getEnrolledCourses,
+  getPendingEnrolledCourses,
   getCreatedCourses,
   editCourse,
   uploadCourseFiles,
@@ -12,6 +13,8 @@ const {
   deleteCourseFile,
   unenrollCourse,
   removeStudentFromCourse,
+  deleteCourse,
+  cancelEnrollmentRequest,
 } = require("../controllers/courseController");
 const protect = require("../middleware/authMiddleware");
 
@@ -20,6 +23,7 @@ module.exports = (upload) => {
   router.get("/get-course/:id", getCourse);
   router.get("/get-courses", getCourses);
   router.get("/get-enrolled-courses", protect, getEnrolledCourses);
+  router.get("/get-pending-enrolled-courses", protect, getPendingEnrolledCourses);
   router.get("/get-created-courses", protect, getCreatedCourses);
   router.post("/create-course", protect, createCourse);
   router.post(
@@ -43,6 +47,8 @@ module.exports = (upload) => {
     protect,
     removeStudentFromCourse
   );
+  router.delete("/:id/delete-course", protect, deleteCourse);
+  router.delete("/:courseId/remove-enrollment", protect, cancelEnrollmentRequest);
 
   return router;
 };

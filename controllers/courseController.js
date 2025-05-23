@@ -1,6 +1,8 @@
 const Student = require("../models/studentModel");
 const Teacher = require("../models/teacherModel");
 const Course = require("../models/courseModel");
+const Quiz = require("../models/quizModel");
+const Assignment = require("../models/assignmentModel");
 const {
   uploadFileToDropbox,
   replaceFileInDropbox,
@@ -72,6 +74,7 @@ const getCourse = async (req, res) => {
     const courseId = req.params.id;
     const course = await Course.findById(courseId)
       .populate("studentsEnrolled", "name email profilePhoto")
+      .populate("pendingEnrollments", "name email profilePhoto")
       .populate("teacherId", "name");
     return res
       .status(200)
@@ -98,6 +101,7 @@ const enrollCourse = async (req, res) => {
   try {
     const { courseId } = req.body;
     const student = req.user;
+
     if (student.role !== "student")
       return res.status(403).json({ message: "Unauthorized access!" });
 
@@ -107,17 +111,24 @@ const enrollCourse = async (req, res) => {
     if (student.enrolledCourses.includes(courseId))
       return res.status(400).json({ message: "Already enrolled!" });
 
-    student.enrolledCourses.push(courseId);
-    course.studentsEnrolled.push(student._id);
+    if (student.pendingEnrollments.includes(courseId))
+      return res.status(400).json({ message: "Request already pending!" });
 
-    await student.save();
+    course.pendingEnrollments.push(student._id);
+    student.pendingEnrollments.push(courseId);
+
     await course.save();
+    await student.save();
 
-    res.status(200).json({ message: "Successfully enrolled!" });
+    return res.status(200).json({
+      message: "Enrollment request submitted. Awaiting admin approval.",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error enrolling in course", error: error.message });
+    console.log(error);
+    return res.status(500).json({
+      message: "Error requesting enrollment",
+      error: error.message,
+    });
   }
 };
 
@@ -197,6 +208,31 @@ const getEnrolledCourses = async (req, res) => {
     return res.status(200).json({
       message: "Enrolled courses fetched successfully!",
       enrolledCourses: studentWithCourses.enrolledCourses,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error fetching enrolled courses",
+      error: error.message,
+    });
+  }
+};
+
+const getPendingEnrolledCourses = async (req, res) => {
+  try {
+    const student = req.user;
+    if (student.role !== "student")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const studentWithCourses = await Student.findById(student._id)
+      .populate({
+        path: "pendingEnrollments",
+        populate: { path: "teacherId", select: "name" },
+      })
+      .select("enrolledCourses");
+
+    return res.status(200).json({
+      message: "Enrolled courses fetched successfully!",
+      pendingEnrollments: studentWithCourses.pendingEnrollments,
     });
   } catch (error) {
     return res.status(500).json({
@@ -341,6 +377,7 @@ const deleteCourseFile = async (req, res) => {
 
     res.status(200).json({ message: "File deleted successfully!" });
   } catch (error) {
+    console.log(error);
     res
       .status(500)
       .json({ message: "Error deleting file", error: error.message });
@@ -383,6 +420,121 @@ const replaceCourseFile = async (req, res) => {
   }
 };
 
+const deleteCourse = async (req, res) => {
+  try {
+    const teacher = req.user;
+    const { id: courseId } = req.params;
+
+    if (teacher.role !== "teacher")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    if (course.teacherId.toString() !== teacher._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "You can only delete your own courses!" });
+    }
+
+    // === 1. Remove course from enrolled students ===
+    await Student.updateMany(
+      { _id: { $in: course.studentsEnrolled } },
+      { $pull: { enrolledCourses: courseId } }
+    );
+
+    // === 2. Remove course from teacher's created courses ===
+    teacher.coursesCreated = teacher.coursesCreated.filter(
+      (cId) => cId.toString() !== courseId
+    );
+    await teacher.save();
+
+    // === 3. Delete course files from Dropbox ===
+    for (const file of course.files) {
+      try {
+        await deleteFileFromDropbox(`/CourseFiles/${course._id}/${file.name}`);
+      } catch (err) {
+        console.warn(
+          `Failed to delete course file ${file.name} from Dropbox:`,
+          err.message
+        );
+      }
+    }
+
+    // === 4. Delete assignments and submission files ===
+    const assignments = await Assignment.find({ courseId });
+    for (const assignment of assignments) {
+      for (const submission of assignment.submissions) {
+        try {
+          // Assumes submissions are stored at: /Assignments/<AssignmentId>/<FileName>
+          await deleteFileFromDropbox(
+            `/Assignments/${assignment._id}/${submission.fileName}`
+          );
+        } catch (err) {
+          console.warn(
+            `Failed to delete submission file ${submission.fileName} from Dropbox:`,
+            err.message
+          );
+        }
+      }
+      await Assignment.findByIdAndDelete(assignment._id);
+    }
+
+    // === 5. Delete quizzes ===
+    const quizzes = await Quiz.find({ courseId });
+    for (const quiz of quizzes) {
+      await Quiz.findByIdAndDelete(quiz._id);
+    }
+
+    // === 6. Delete the course document ===
+    await Course.findByIdAndDelete(courseId);
+
+    res.status(200).json({
+      message: "Course and all related content deleted successfully!",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error deleting course and its contents",
+      error: error.message,
+    });
+  }
+};
+
+const cancelEnrollmentRequest = async (req, res) => {
+  try {
+    const student = req.user;
+    const { courseId } = req.params;
+
+    if (student.role !== "student")
+      return res.status(403).json({ message: "Unauthorized!" });
+
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ message: "Course not found!" });
+
+    if (!student.pendingEnrollments.includes(courseId))
+      return res.status(400).json({ message: "No pending request to cancel" });
+
+    course.pendingEnrollments = course.pendingEnrollments.filter(
+      (id) => id.toString() !== student._id.toString()
+    );
+    student.pendingEnrollments = student.pendingEnrollments.filter(
+      (id) => id.toString() !== courseId
+    );
+
+    await course.save();
+    await student.save();
+
+    return res
+      .status(200)
+      .json({ message: "Enrollment request canceled successfully." });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error canceling enrollment request",
+      error: error.message,
+    });
+  }
+};
+
 const generateUniqueCourseCode = async () => {
   const generate = () => `CRS-${Math.floor(1000 + Math.random() * 9000)}`;
   let code = generate();
@@ -402,6 +554,7 @@ module.exports = {
   getCourses,
   enrollCourse,
   getEnrolledCourses,
+  getPendingEnrolledCourses,
   getCreatedCourses,
   editCourse,
   uploadCourseFiles,
@@ -409,4 +562,6 @@ module.exports = {
   replaceCourseFile,
   unenrollCourse,
   removeStudentFromCourse,
+  deleteCourse,
+  cancelEnrollmentRequest,
 };

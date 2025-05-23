@@ -1,5 +1,6 @@
 const Admin = require("../models/adminModel");
 const Student = require("../models/studentModel");
+const Course = require("../models/courseModel");
 const FeePayment = require("../models/feePaymentModel");
 const bcrypt = require("bcryptjs");
 
@@ -55,7 +56,6 @@ const getStudentFees = async (req, res) => {
     const fees = await FeePayment.find({ studentId }).sort({ datePaid: -1 });
     res.status(200).json(fees);
   } catch (err) {
-    console.log(err);
     res
       .status(500)
       .json({ message: "Error fetching fee records", error: err.message });
@@ -86,9 +86,119 @@ const recordStudentFee = async (req, res) => {
   }
 };
 
+const getPendingEnrollmentsForAdmin = async (req, res) => {
+  try {
+    // Fetch all courses that have pending students
+    const courses = await Course.find({
+      pendingEnrollments: { $exists: true, $not: { $size: 0 } },
+    })
+      .populate("pendingEnrollments", "name email") // only name & email for each student
+      .select("title courseCode pendingEnrollments"); // only necessary course info
+
+    // Flatten and format the data
+    const pendingRequests = [];
+
+    courses.forEach((course) => {
+      course.pendingEnrollments.forEach((student) => {
+        pendingRequests.push({
+          courseId: course._id,
+          courseTitle: course.title,
+          courseCode: course.courseCode,
+          studentId: student._id,
+          studentName: student.name,
+          studentEmail: student.email,
+        });
+      });
+    });
+
+    res.status(200).json(pendingRequests);
+  } catch (err) {
+    console.error("Error fetching pending enrollments:", err);
+    res.status(500).json({ message: "Failed to fetch pending enrollments." });
+  }
+};
+
+const approveEnrollment = async (req, res) => {
+  try {
+    const { courseId: studentId, studentId: courseId } = req.params;
+    const admin = req.user;
+
+    if (admin.role !== "admin")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const course = await Course.findById(courseId);
+    const student = await Student.findById(studentId);
+
+    if (!course || !student)
+      return res.status(404).json({ message: "Course or Student not found" });
+
+    const pendingInCourse = course.pendingEnrollments.includes(studentId);
+    const pendingInStudent = student.pendingEnrollments.includes(courseId);
+
+    if (!pendingInCourse || !pendingInStudent)
+      return res.status(400).json({ message: "No matching pending request" });
+
+    course.pendingEnrollments = course.pendingEnrollments.filter(
+      (id) => id.toString() !== studentId
+    );
+    course.studentsEnrolled.push(student._id);
+
+    student.pendingEnrollments = student.pendingEnrollments.filter(
+      (id) => id.toString() !== courseId
+    );
+    student.enrolledCourses.push(course._id);
+
+    await course.save();
+    await student.save();
+
+    return res.status(200).json({ message: "Enrollment approved!" });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error approving enrollment",
+      error: error.message,
+    });
+  }
+};
+
+const rejectEnrollment = async (req, res) => {
+  try {
+    const { courseId: studentId, studentId: courseId } = req.params;
+    const admin = req.user;
+
+    if (admin.role !== "admin")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const course = await Course.findById(courseId);
+    const student = await Student.findById(studentId);
+
+    if (!course || !student)
+      return res.status(404).json({ message: "Course or Student not found" });
+
+    course.pendingEnrollments = course.pendingEnrollments.filter(
+      (id) => id.toString() !== studentId
+    );
+    student.pendingEnrollments = student.pendingEnrollments.filter(
+      (id) => id.toString() !== courseId
+    );
+
+    await course.save();
+    await student.save();
+
+    return res.status(200).json({ message: "Enrollment request rejected." });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error rejecting enrollment",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createAdmin,
   linkParentsToStudent,
   getStudentFees,
   recordStudentFee,
+  getPendingEnrollmentsForAdmin,
+  approveEnrollment,
+  rejectEnrollment,
 };
