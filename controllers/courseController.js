@@ -75,7 +75,7 @@ const getCourse = async (req, res) => {
     const course = await Course.findById(courseId)
       .populate("studentsEnrolled", "name email profilePhoto")
       .populate("pendingEnrollments", "name email profilePhoto")
-      .populate("teacherId", "name");
+      .populate("teacherId", "name profilePhoto");
     return res
       .status(200)
       .json({ message: "Course fetched successfully!", course });
@@ -201,7 +201,7 @@ const getEnrolledCourses = async (req, res) => {
     const studentWithCourses = await Student.findById(student._id)
       .populate({
         path: "enrolledCourses",
-        populate: { path: "teacherId", select: "name" },
+        populate: { path: "teacherId", select: "name profilePhoto" },
       })
       .select("enrolledCourses");
 
