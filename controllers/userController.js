@@ -50,14 +50,14 @@ const editUserProfile = async (req, res, next) => {
   const { name } = req.body;
   let fileData = "";
 
-  if (req.file && !user.profilePhoto) {
+  if (req.file && (!user.profilePhoto || !user.profilePhoto.name)) {
     fileData = await uploadFileToDropbox(
       `/ProfilePictures/${user._id}`,
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype
     );
-  } else if (user.profilePhoto && req.file) {
+  } else if (req.file && user.profilePhoto && user.profilePhoto.name) {
     fileData = await replaceFileInDropbox(
       `/ProfilePictures/${user._id}`,
       user.profilePhoto.name,
