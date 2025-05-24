@@ -30,6 +30,10 @@ const StudentSchema = Mongoose.Schema(
     pendingEnrollments: [
       { type: Mongoose.Schema.Types.ObjectId, ref: "Course" },
     ],
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

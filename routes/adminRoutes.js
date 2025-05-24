@@ -8,6 +8,9 @@ const {
   getPendingEnrollmentsForAdmin,
   approveEnrollment,
   rejectEnrollment,
+  getUnapprovedStudents,
+  approveStudent,
+  rejectStudent,
 } = require("../controllers/adminController");
 const { getUsersByRole } = require("../controllers/userController");
 const protect = require("../middleware/authMiddleware");
@@ -19,7 +22,10 @@ router.get(
   protect,
   getPendingEnrollmentsForAdmin
 );
+router.get("/students/pending-system-access", protect, getUnapprovedStudents);
 router.put("/students/:studentId/parents", protect, linkParentsToStudent);
+router.put("/students/:studentId/approve", protect, approveStudent);
+router.delete("/students/:studentId/reject", protect, rejectStudent);
 router.get("/students/:studentId/fees", protect, getStudentFees);
 router.post("/students/:studentId/fees", protect, recordStudentFee);
 router.put(

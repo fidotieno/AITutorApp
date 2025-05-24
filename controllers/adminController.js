@@ -193,6 +193,73 @@ const rejectEnrollment = async (req, res) => {
   }
 };
 
+const getUnapprovedStudents = async (req, res, next) => {
+  try {
+    const admin = req.user;
+    if (admin.role !== "admin")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const students = await Student.find({ isApproved: false }).select(
+      "name email createdAt"
+    );
+    res.status(200).json(students);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Error fetching unapproved students",
+      error: error.message,
+    });
+  }
+};
+
+const approveStudent = async (req, res, next) => {
+  try {
+    const admin = req.user;
+    const { studentId } = req.params;
+
+    if (admin.role !== "admin")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    if (student.isApproved)
+      return res.status(400).json({ message: "Student is already approved" });
+
+    student.isApproved = true;
+    await student.save();
+
+    res.status(200).json({ message: "Student approved successfully" });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error approving student",
+      error: error.message,
+    });
+  }
+};
+
+const rejectStudent = async (req, res, next) => {
+  try {
+    const admin = req.user;
+    const { studentId } = req.params;
+
+    if (admin.role !== "admin")
+      return res.status(403).json({ message: "Unauthorized access!" });
+
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    await Student.deleteOne({ _id: studentId });
+
+    res.status(200).json({ message: "Student rejected and deleted." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error rejecting student",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createAdmin,
   linkParentsToStudent,
@@ -201,4 +268,7 @@ module.exports = {
   getPendingEnrollmentsForAdmin,
   approveEnrollment,
   rejectEnrollment,
+  getUnapprovedStudents,
+  approveStudent,
+  rejectStudent,
 };
